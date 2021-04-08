@@ -9,7 +9,7 @@
   export let url = "";
 
 
-	let nyc311Data;
+	let nyc311Data = [];
 	fetchLatestData().then((res) => {
 		nyc311Data = parseCSVData(res.data)
 	});

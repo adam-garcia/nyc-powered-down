@@ -42,9 +42,7 @@
         return filterToOpenValue.checked ? d.status === "Open" : true
       })
       .map((data, i) => {
-        if (i === 0) {
-          console.log(data);
-        }
+        // Hacky? Building out the geojson feature by hand
         return {
           type: "Feature",
           geometry: {

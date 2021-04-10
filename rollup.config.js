@@ -7,14 +7,11 @@ import css from 'rollup-plugin-css-only';
 import scss from 'rollup-plugin-scss';
 import replace from '@rollup/plugin-replace';
 const dotenv = require('dotenv');
-// import dotenv from 'dotenv';
-// console.log(dotenv);
 dotenv.config();
-
-console.log(process.env)
 
 const mapboxToken = process.env.MAPBOX_API_TOKEN;
 const production = !process.env.ROLLUP_WATCH;
+const dotLimit = production ? 50000 : 100;
 
 function serve() {
 	let server;
@@ -83,7 +80,8 @@ export default {
 		replace({
 			secrets: JSON.stringify({
 				MAPBOX_API_TOKEN: mapboxToken,
-			})
+			}),
+			dotLimit: dotLimit
 		}),
 
 		// If we're building for production (npm run build

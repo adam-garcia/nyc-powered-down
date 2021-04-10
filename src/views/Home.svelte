@@ -1,10 +1,12 @@
 <script>
   export let nyc311Data;
-  let outageMap, filterToOpenValue, feature, popup;
+  let outageMap, filterToOpenValue, feature, popup, showNTA;
   let filterToOpen = true;
+  showNTA = false;
   import { onMount } from "svelte";
   import dayjs from "dayjs";
   import mapboxgl from "mapbox-gl";
+  import * as axios from "axios";
 
   mapboxgl.accessToken = secrets.MAPBOX_API_TOKEN;
 
@@ -20,28 +22,83 @@
       center: [-74, 40.7], // starting position [lng, lat]
       zoom: 9, // starting zoom
       maxZoom: 14,
-      minZoom: 9
-    }).addControl(new mapboxgl.NavigationControl({
-      showCompass: false
-    }));
+      minZoom: 9,
+    }).addControl(
+      new mapboxgl.NavigationControl({
+        showCompass: false,
+      })
+    );
   });
+
+  let toggleOpen = () => {
+    filterToOpen = !filterToOpen;
+    addFeatures();
+  }
+      //   const boro = cd.properties.boro_cd.substr(0, 1);
+      //   const districtNumber = cd.properties.boro_cd.substr(2, 3);
+      //   outageMap.getCanvas().style.cursor = "pointer";
+  const boros = ["Manhattan", "Bronx", "Brooklyn", "Queens", "Staten Island"];
+
+  let toggleNTA = () => {
+
+    axios.get("https://data.cityofnewyork.us/resource/jp9i-3b7y.geojson")
+      .then((res) => {
+        res.data.features = res.data.features.map((feature) => {
+          const boro = feature.properties.boro_cd.substr(0, 1);
+          const cd = + feature.properties.boro_cd.substr(1);
+          feature.properties.cd = `${boros[+ boro - 1]}\nDistrict ${cd}`;
+          return feature;
+        });
+        if (!outageMap.getSource("nbhd-data")) {
+          outageMap.addSource("nbhd-data", {
+            type: "geojson",
+            data: res.data
+          });
+        }
+        if (outageMap.getLayer("nbhd-polygons")) {
+          outageMap.removeLayer("nbhd-polygons");
+          outageMap.removeLayer("nbhd-labels");
+        } else {
+          outageMap.addLayer({
+            source: "nbhd-data",
+            id: "nbhd-polygons",
+            type: "fill",
+            paint: {
+              "fill-color": "rgba(13, 12, 69, 0.420)",
+              "fill-outline-color": "#000000"
+            },
+          });
+          outageMap.addLayer({
+            source: "nbhd-data",
+            id: "nbhd-labels",
+            type: "symbol",
+            layout: {
+              "text-field": ["get", "cd"],
+              "text-size": 12
+            },
+          });
+        }
+        showNTA = !showNTA;
+        addFeatures();
+      })
+  }
 
   let addFeatures = () => {
     if (outageMap.getLayer("outages")) {
-      outageMap.removeLayer("outages")
-    };
+      outageMap.removeLayer("outages");
+    }
     if (outageMap.getLayer("outage-points")) {
-      outageMap.removeLayer("outage-points")
-    };
+      outageMap.removeLayer("outage-points");
+    }
     if (outageMap.getSource("outage-reports")) {
-      outageMap.removeSource("outage-reports")
-    };
+      outageMap.removeSource("outage-reports");
+    }
 
     const features = nyc311Data
       .filter((d) => d.latitude)
       .filter((d) => dayjs(d.created_date).isAfter("2020-12-31"))
       .filter((d) => {
-        return filterToOpenValue.checked ? d.status === "Open" : true
+        return filterToOpen ? d.status === "Open" : true;
       })
       .map((data, i) => {
         // Hacky? Building out the geojson feature by hand
@@ -72,8 +129,8 @@
           default: 0.75,
           stops: [
             [12, 0.75],
-            [13, 0]
-          ]
+            [13, 0],
+          ],
         },
         "heatmap-color": [
           "interpolate",
@@ -102,7 +159,13 @@
       minzoom: 12,
       paint: {
         "circle-color": "rgba(248, 149, 64, 0.7)",
-
+        "circle-radius": {
+          base: 1.75,
+          stops: [
+            [12, 2],
+            [14, 20],
+          ],
+        },
       },
     });
     outageMap.on("mousemove", "outage-points", (e) => {
@@ -113,7 +176,7 @@
     });
 
     outageMap.on("click", function (e) {
-      var features = outageMap.queryRenderedFeatures(e.point, {
+      const features = outageMap.queryRenderedFeatures(e.point, {
         layers: ["outage-points"],
       });
 
@@ -124,6 +187,9 @@
       feature = features[0];
       outageMap.getCanvas().style.cursor = "pointer";
 
+      if (popup) {
+        popup.remove();
+      }
       popup = new mapboxgl.Popup({ offset: [0, -15] })
         .setLngLat(feature.geometry.coordinates)
         .setHTML(
@@ -142,45 +208,40 @@
       popup.remove();
       feature = undefined;
     }
-  }
-
+  };
 </script>
 
 <div on:click={clearPopup}>
-
   <h2 class="is-text-primary">Home</h2>
 
   <h3>
-    {nReports ? nReports.toLocaleString() : "0"}
+    {nReports ? nReports.toLocaleString() : "Loading..."}
     Power Outage Calls to 311 in 2021
   </h3>
   <h3>
-    {nReportsOpen ? nReportsOpen.toLocaleString() : "0"}
+    {nReportsOpen ? nReportsOpen.toLocaleString() : "Loading..."}
     are open as of today
   </h3>
 
-  <label>
-    Filter to Open Reports
-    <input
-      type="checkbox"
-      bind:checked={filterToOpen}
-      bind:this={filterToOpenValue}
-      on:click={addFeatures}
-    />
-  </label>
+  <button on:click={toggleOpen}>
+    Show {filterToOpen ? "All" : "Open"} Incidents
+  </button>
+
+  <button on:click={toggleNTA}>
+    {showNTA ? "Hide" : "Show"}
+    Neighborhood Boundaries
+  </button>
 
   {#if feature}
     {JSON.stringify(feature.properties)}
   {/if}
 
-
   {#if nyc311Data.length}
-    {(addFeatures())}
+    {addFeatures()}
   {/if}
   <div class="map_container">
     <div id="map" />
   </div>
-
 </div>
 
 <style>

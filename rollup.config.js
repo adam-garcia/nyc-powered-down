@@ -4,7 +4,16 @@ import resolve from '@rollup/plugin-node-resolve';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 import css from 'rollup-plugin-css-only';
+import scss from 'rollup-plugin-scss';
+import replace from '@rollup/plugin-replace';
+const dotenv = require('dotenv');
+// import dotenv from 'dotenv';
+// console.log(dotenv);
+dotenv.config();
 
+console.log(process.env)
+
+const mapboxToken = process.env.MAPBOX_API_TOKEN;
 const production = !process.env.ROLLUP_WATCH;
 
 function serve() {
@@ -47,6 +56,10 @@ export default {
 		// we'll extract any component CSS out into
 		// a separate file - better for performance
 		css({ output: 'bundle.css' }),
+		scss({
+			output: 'public/output.css',
+			sass: require('node-sass'),
+		}),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In
@@ -66,6 +79,12 @@ export default {
 		// Watch the `public` directory and refresh the
 		// browser on changes when not in production
 		!production && livereload('public'),
+
+		replace({
+			secrets: JSON.stringify({
+				MAPBOX_API_TOKEN: mapboxToken,
+			})
+		}),
 
 		// If we're building for production (npm run build
 		// instead of npm run dev), minify

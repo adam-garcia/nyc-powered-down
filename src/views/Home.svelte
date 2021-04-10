@@ -1,11 +1,9 @@
 <script>
   export let nyc311Data;
-  let outageMap, filterToOpenValue;
+  let outageMap, filterToOpenValue, feature, popup;
   let filterToOpen = true;
   import { onMount } from "svelte";
   import dayjs from "dayjs";
-  // import { map, mapboxgl } from "../modules/map";
-  import secrets from "../secrets.js";
   import mapboxgl from "mapbox-gl";
 
   mapboxgl.accessToken = secrets.MAPBOX_API_TOKEN;
@@ -21,7 +19,11 @@
       style: "mapbox://styles/mapbox/light-v10", // style URL
       center: [-74, 40.7], // starting position [lng, lat]
       zoom: 9, // starting zoom
-    });
+      maxZoom: 14,
+      minZoom: 9
+    }).addControl(new mapboxgl.NavigationControl({
+      showCompass: false
+    }));
   });
 
   let addFeatures = () => {
@@ -99,7 +101,8 @@
       source: "outage-reports",
       minzoom: 12,
       paint: {
-        "circle-color": "#f89540"
+        "circle-color": "rgba(248, 149, 64, 0.7)",
+
       },
     });
     outageMap.on("mousemove", "outage-points", (e) => {
@@ -118,10 +121,10 @@
         return;
       }
 
-      var feature = features[0];
+      feature = features[0];
       outageMap.getCanvas().style.cursor = "pointer";
 
-      var popup = new mapboxgl.Popup({ offset: [0, -15] })
+      popup = new mapboxgl.Popup({ offset: [0, -15] })
         .setLngLat(feature.geometry.coordinates)
         .setHTML(
           `<h3>Borough: ${feature.properties.borough}</h3>` +
@@ -134,34 +137,50 @@
     return "";
   };
 
+  let clearPopup = (e) => {
+    if (popup && e.target.nodeName !== "CANVAS") {
+      popup.remove();
+      feature = undefined;
+    }
+  }
+
 </script>
 
-<h2>Home</h2>
+<div on:click={clearPopup}>
 
-<h3>
-  {nReports ? nReports.toLocaleString() : "0"}
-  Power Outage Calls to 311 in 2021
-</h3>
-<h3>
-  {nReportsOpen ? nReportsOpen.toLocaleString() : "0"}
-  are open as of today
-</h3>
+  <h2 class="is-text-primary">Home</h2>
 
-<label>
-  Filter to Open Reports
-  <input
-    type="checkbox"
-    bind:checked={filterToOpen}
-    bind:this={filterToOpenValue}
-    on:click={addFeatures}
-  />
-</label>
+  <h3>
+    {nReports ? nReports.toLocaleString() : "0"}
+    Power Outage Calls to 311 in 2021
+  </h3>
+  <h3>
+    {nReportsOpen ? nReportsOpen.toLocaleString() : "0"}
+    are open as of today
+  </h3>
 
-{#if nyc311Data.length}
-  {(addFeatures())}
-{/if}
-<div class="map_container">
-  <div id="map" />
+  <label>
+    Filter to Open Reports
+    <input
+      type="checkbox"
+      bind:checked={filterToOpen}
+      bind:this={filterToOpenValue}
+      on:click={addFeatures}
+    />
+  </label>
+
+  {#if feature}
+    {JSON.stringify(feature.properties)}
+  {/if}
+
+
+  {#if nyc311Data.length}
+    {(addFeatures())}
+  {/if}
+  <div class="map_container">
+    <div id="map" />
+  </div>
+
 </div>
 
 <style>

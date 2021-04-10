@@ -1,8 +1,13 @@
 const { createServer } = require("http");
 const app = require("./dist/App.js");
 
+require('dotenv');
+dotenv.config();
+
 createServer((req, res) => {
-  const { html } = app.render({ url: req.url });
+  const { html } = app.render({
+    url: req.url
+  });
 
   res.write(`
     <!DOCTYPE html>

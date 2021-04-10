@@ -32,6 +32,7 @@ const parseCSVData = (rawData) => {
       longitude: +incident.longitude,
     }
   })
+  .filter(d => d.created_date.year() == dayjs().year())
 }
 
 export default parseCSVData;

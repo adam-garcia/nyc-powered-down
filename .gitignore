@@ -4,4 +4,4 @@
 .DS_Store
 
 .env
-secrets.js
+output.css

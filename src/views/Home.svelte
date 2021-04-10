@@ -33,26 +33,26 @@
   let toggleOpen = () => {
     filterToOpen = !filterToOpen;
     addFeatures();
-  };
-  //   const boro = cd.properties.boro_cd.substr(0, 1);
-  //   const districtNumber = cd.properties.boro_cd.substr(2, 3);
-  //   outageMap.getCanvas().style.cursor = "pointer";
+  }
+      //   const boro = cd.properties.boro_cd.substr(0, 1);
+      //   const districtNumber = cd.properties.boro_cd.substr(2, 3);
+      //   outageMap.getCanvas().style.cursor = "pointer";
   const boros = ["Manhattan", "Bronx", "Brooklyn", "Queens", "Staten Island"];
 
   let toggleNTA = () => {
-    axios
-      .get("https://data.cityofnewyork.us/resource/jp9i-3b7y.geojson")
+
+    axios.get("https://data.cityofnewyork.us/resource/jp9i-3b7y.geojson")
       .then((res) => {
         res.data.features = res.data.features.map((feature) => {
           const boro = feature.properties.boro_cd.substr(0, 1);
-          const cd = +feature.properties.boro_cd.substr(1);
-          feature.properties.cd = `${boros[+boro - 1]}\nDistrict ${cd}`;
+          const cd = + feature.properties.boro_cd.substr(1);
+          feature.properties.cd = `${boros[+ boro - 1]}\nDistrict ${cd}`;
           return feature;
         });
         if (!outageMap.getSource("nbhd-data")) {
           outageMap.addSource("nbhd-data", {
             type: "geojson",
-            data: res.data,
+            data: res.data
           });
         }
         if (outageMap.getLayer("nbhd-polygons")) {
